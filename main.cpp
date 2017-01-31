@@ -193,6 +193,8 @@ clsTimer3 timer3;
 
 #include "clsSpi1.cpp"
 clsSpi1 spi1;
+#include "clsSpi2.cpp"
+clsSpi1 spi2;
 
 #include "ADC1class.cpp"
 clsADC1 adc1;

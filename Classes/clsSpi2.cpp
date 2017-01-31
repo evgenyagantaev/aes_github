@@ -13,29 +13,21 @@ public:
         //RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOC, ENABLE);
         
         
-        /* Connect PB10 to SPI2_SCK */
-        GPIO_PinAFConfig(GPIOB, GPIO_PinSource10, GPIO_AF_SPI2);
-        /* Connect PC2 to SPI2_MISO */
-        GPIO_PinAFConfig(GPIOC, GPIO_PinSource2, GPIO_AF_SPI2);
-        /* Connect PC3 to SPI2_MOSI */
-        GPIO_PinAFConfig(GPIOC, GPIO_PinSource3, GPIO_AF_SPI2);
+        /* Connect PB13 to SPI2_SCK */
+        GPIO_PinAFConfig(GPIOB, GPIO_PinSource13, GPIO_AF_SPI2);
+        /* Connect PB14 to SPI2_MISO */
+        GPIO_PinAFConfig(GPIOB, GPIO_PinSource14, GPIO_AF_SPI2);
+        /* Connect PB15to SPI2_MOSI */
+        GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_SPI2);
         
-        /* Configure SPI2 pins as alternate function */ 
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2|GPIO_Pin_3; //MISO, MOSI pins
-        GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-        GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-        GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-        GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL; 
-        GPIO_Init(GPIOC, &GPIO_InitStructure);
-        
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10; //SCK pin
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15; //SCK, MISO, MOSI pins
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
         GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
         GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL; 
         GPIO_Init(GPIOB, &GPIO_InitStructure);
         
-        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13; //CS pin
+        GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10; //CS pin
         GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
         GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
         GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -50,7 +42,8 @@ public:
         SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
         SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
         SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-        SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8; //PCLK1/16 = 30MHz/16
+        // 60 MHz / 32 = 1.875 MHZ -> clock frequency of SPI1 (ads8320)
+        SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32; 
         SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
         SPI_InitStructure.SPI_CRCPolynomial = 7;
         SPI_Init(SPI2, &SPI_InitStructure);
