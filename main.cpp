@@ -24,7 +24,7 @@ int short_plot_output_flag = 0;
 int voltage_and_temperature_flag = 0;
 int measure_voltage_temperature_flag = 0;
 int voltage_temperature_current_flag = 0;
-int sleep_flag = 1;
+int sleep_flag = 0;
 
 
 //----------------------------global constants----------------------------------
@@ -59,7 +59,7 @@ char current_input[4];
 char frequency_input[7];
 
 // buffer for input symbols
-#define INPUTBUFFERLENGTH 64
+#define INPUTBUFFERLENGTH 128
 char input_buffer[INPUTBUFFERLENGTH];
 
 
@@ -139,11 +139,13 @@ int testFlag=0;
 int measure_on = 0;
 int measurement_counter = 0;
 
-char message[64];
+char message[128];
 char voltage_message[21];
 char temperature_message[21];
 char temperature2_message[21];
 char test_voltage_message[21];
+char Il_message[21];
+char Ih_message[21];
 char test_temperature_message[21];
 char test_temperature2_message[21];
 
@@ -194,7 +196,7 @@ clsTimer3 timer3;
 #include "clsSpi1.cpp"
 clsSpi1 spi1;
 #include "clsSpi2.cpp"
-clsSpi1 spi2;
+clsSpi2 spi2;
 
 #include "ADC1class.cpp"
 clsADC1 adc1;
@@ -216,6 +218,7 @@ clsWatchdog watchdog;
 void uart1_receive_interrupt_service(char r)
 {
     static int input_buffer_index = 0;
+    int i;
     
     if(r == '\n')   // end of input string received
     {
@@ -225,146 +228,168 @@ void uart1_receive_interrupt_service(char r)
         
         // finalize input string
         input_buffer[input_buffer_index] = 0;
-        // parse input string
         
-        // 1. check GETU, GETUT, GETUTI
-        if(strstr(input_buffer, "GETUTI") == input_buffer)
+        // pass and remove zigbee prompts (look for UNICAST:... message)
+        if((strstr(input_buffer, "UCAST:") == input_buffer))
         {
-            voltage_temperature_current_flag = 1;
-        }
-        else if(strstr(input_buffer, "GETUT") == input_buffer)
-        {
-            voltage_and_temperature_flag = 1;
-        }
-        else if(strstr(input_buffer, "GETU") == input_buffer)
-        {
-            get_voltage_flag = 1;
-        }
-        else if(strstr(input_buffer, "SETFREQUENCY") == input_buffer)
-        {
-            char ch;
-            if((sscanf(input_buffer, "SETFREQUENCY %lf%c", &(f_setting), &ch) == 2) && (ch == '\r'))
+            //cut prompt
+            if(input_buffer_index >= 27)
             {
-                // correct frequency settings
-                if(f_setting > 200)
-                    f_setting = 200;
-                if(f_setting < 0.1)
-                    f_setting = 0.1;
+                // save PAN coordinator eid
+                for(i=0; i<16; i++)
+                    uart.coord_eid[i] = input_buffer[i+6];
+                // shift input buffer
+                for(i=26; i<=input_buffer_index; i++)
+                    input_buffer[i-26] = input_buffer[i];
                 
-                // print echo
-                uart.transmitMessage("frequency = ");
-                uart.transmitMessage(input_buffer);
-                uart.transmitMessage("\r\n");
+                // parse input string
                 
-                // correct frequency (snap to frequency grid)
-                double min_difference = abs(f_setting - frequencies[0]);
-                int min_index = 0;
-                
-                for(int i = 1; i < FREQ_LENGTH; i++)
+                // 1. check GETU, GETUT, GETUTI
+                if(strstr(input_buffer, "GETUTI") == input_buffer)
                 {
-                    if(min_difference > abs(f_setting - frequencies[i]))
+                    voltage_temperature_current_flag = 1;
+                }
+                else if(strstr(input_buffer, "GETUT") == input_buffer)
+                {
+                    voltage_and_temperature_flag = 1;
+                }
+                else if(strstr(input_buffer, "GETU") == input_buffer)
+                {
+                    get_voltage_flag = 1;
+                }
+                else if(strstr(input_buffer, "SETFREQUENCY") == input_buffer)
+                {
+                    char ch;
+                    if((sscanf(input_buffer, "SETFREQUENCY %lf%c", &(f_setting), &ch) == 2) && (ch == '\r'))
                     {
-                        min_difference = abs(f_setting - frequencies[i]);
-                        min_index = i;
+                        // correct frequency settings
+                        if(f_setting > 200)
+                            f_setting = 200;
+                        if(f_setting < 0.1)
+                            f_setting = 0.1;
+                        
+                        // print echo
+                        //uart.transmitMessage("frequency = ");
+                        //uart.transmitMessage(input_buffer);
+                        //uart.transmitMessage("\r\n");
+                        sprintf(message, "frequency = %s", input_buffer);
+                        uart.transmitMessage(message);
+                        
+                        // correct frequency (snap to frequency grid)
+                        double min_difference = abs(f_setting - frequencies[0]);
+                        int min_index = 0;
+                        
+                        for(int i = 1; i < FREQ_LENGTH; i++)
+                        {
+                            if(min_difference > abs(f_setting - frequencies[i]))
+                            {
+                                min_difference = abs(f_setting - frequencies[i]);
+                                min_index = i;
+                            }
+                        }
+                        
+                        working_frequency = frequencies[min_index];
+                        // adjust duration
+                        if(min_index <= 3)
+                            duration = 10;
+                        else if(min_index >= 6)
+                            duration = 1;
+                        else
+                            duration = 5;
+                        
+                        // calculate number of pulses
+                        common.number_of_pulses = (int)(duration*working_frequency);
+                        samples_in_one_pulse = (int)( 1000 / working_frequency );
+                    }
+                    else // something wrong
+                    {
+                        wrong_command = 1;
                     }
                 }
+                else if(strstr(input_buffer, "SETCURRENT") == input_buffer)
+                {
+                    char ch;
+                    if((sscanf(input_buffer, "SETCURRENT %d%c", &(common.i_setting), &ch) == 2) && (ch == '\r'))
+                    {
+                        // correct current settings
+                        if(common.i_setting > 255)
+                            common.i_setting = 255;
+                        if(common.i_setting < 1)
+                            common.i_setting = 1;
+                        
+                        // print echo
+                        //uart.transmitMessage("current = ");
+                        //uart.transmitMessage(input_buffer);
+                        //uart.transmitMessage("\r\n");
+                        sprintf(message, "current = %s", input_buffer);
+                        uart.transmitMessage(message);
+                        
+                        // transform gpios
+                        uint8_t I_raw = (uint8_t)(common.i_setting);
+                        uint8_t I_final = 0;
+                        // 0 - 5, 1 - 4, 2 - 6, 3 - 7, 4 - 0, 5 - 1, 6 - 2, 7 - 3
+                       
+                        I_final = I_raw >> 4;    // 4 - 0, 5 - 1, 6 - 2, 7 - 3
+                        I_final = I_final | ((I_raw & 0x01)<<5);      // 0 - 5
+                        I_final = I_final | (((I_raw>>1) & 0x01)<<4); // 1 - 4
+                        I_final = I_final | (((I_raw>>2) & 0x01)<<6); // 2 - 6
+                        I_final = I_final | (((I_raw>>3) & 0x01)<<7); // 3 - 7
+                        
+                        common.resistors_gpios = (uint16_t)I_final;
+                    }
+                    else // something wrong
+                    {
+                        wrong_command = 1;
+                    }
+                }
+                else if(strstr(input_buffer, "STARTTEST") == input_buffer)
+                {
+                    measure_and_save_flag = 1;
+                    ////////////////////////////
+                    //working_frequency = 10.0;
+                    //common.i_setting = 32;
+                    //duration = 1;
+                    common.number_of_pulses = (int)(duration*working_frequency);
+                    samples_in_one_pulse = (int)( 1000 / working_frequency );
+                }
+                else if(strstr(input_buffer, "GETTESTDATASLOW") == input_buffer)
+                {
+                    start_slowly_plot_output_flag = 1;
+                }
+                else if(strstr(input_buffer, "GETTESTDATAFAST") == input_buffer)
+                {
+                    start_plot_output_flag = 1;
+                }
+                else if(strstr(input_buffer, "GETVERSION") == input_buffer)
+                {
+                    sprintf(message, "version = %s", VERSION);
+                    uart.transmitMessage(message);
+                }
+                else if(strstr(input_buffer, "SLEEP") == input_buffer)
+                {
+                    sleep_flag = 1;
+                    uart.transmitMessage("SLEEPING");
+                }
+                else if(strstr(input_buffer, "WAKEUP") == input_buffer)
+                {
+                    uart.transmitMessage("AWAKENED");
+                    sleep_flag = 0;
+                    timer3.startTimer();
+                }
+                else // nothing of known
+                {
+                    wrong_command = 1;
+                }
                 
-                working_frequency = frequencies[min_index];
-                // adjust duration
-                if(min_index <= 3)
-                    duration = 10;
-                else if(min_index >= 6)
-                    duration = 1;
-                else
-                    duration = 5;
-                
-                // calculate number of pulses
-                common.number_of_pulses = (int)(duration*working_frequency);
-                samples_in_one_pulse = (int)( 1000 / working_frequency );
+                if(wrong_command)
+                {
+                    //char wrong_command_mesage[INPUTBUFFERLENGTH + 32];
+                    //sprintf(wrong_command_mesage, "WRONG COMMAND %s\r\n", input_buffer);
+                    //uart.transmitMessage(wrong_command_mesage);
+                }
+            
             }
-            else // something wrong
-            {
-                wrong_command = 1;
-            }
-        }
-        else if(strstr(input_buffer, "SETCURRENT") == input_buffer)
-        {
-            char ch;
-            if((sscanf(input_buffer, "SETCURRENT %d%c", &(common.i_setting), &ch) == 2) && (ch == '\r'))
-            {
-                // correct current settings
-                if(common.i_setting > 255)
-                    common.i_setting = 255;
-                if(common.i_setting < 1)
-                    common.i_setting = 1;
-                
-                // print echo
-                uart.transmitMessage("current = ");
-                uart.transmitMessage(input_buffer);
-                uart.transmitMessage("\r\n");
-                
-                // transform gpios
-                uint8_t I_raw = (uint8_t)(common.i_setting);
-                uint8_t I_final = 0;
-                // 0 - 5, 1 - 4, 2 - 6, 3 - 7, 4 - 0, 5 - 1, 6 - 2, 7 - 3
-               
-                I_final = I_raw >> 4;    // 4 - 0, 5 - 1, 6 - 2, 7 - 3
-                I_final = I_final | ((I_raw & 0x01)<<5);      // 0 - 5
-                I_final = I_final | (((I_raw>>1) & 0x01)<<4); // 1 - 4
-                I_final = I_final | (((I_raw>>2) & 0x01)<<6); // 2 - 6
-                I_final = I_final | (((I_raw>>3) & 0x01)<<7); // 3 - 7
-                
-                common.resistors_gpios = (uint16_t)I_final;
-            }
-            else // something wrong
-            {
-                wrong_command = 1;
-            }
-        }
-        else if(strstr(input_buffer, "STARTTEST") == input_buffer)
-        {
-            measure_and_save_flag = 1;
-            ////////////////////////////
-            working_frequency = 10.0;
-            common.i_setting = 32;
-            duration = 1;
-            common.number_of_pulses = (int)(duration*working_frequency);
-            samples_in_one_pulse = (int)( 1000 / working_frequency );
-        }
-        else if(strstr(input_buffer, "GETTESTDATASLOW") == input_buffer)
-        {
-            start_slowly_plot_output_flag = 1;
-        }
-        else if(strstr(input_buffer, "GETTESTDATAFAST") == input_buffer)
-        {
-            start_plot_output_flag = 1;
-        }
-        else if(strstr(input_buffer, "GETVERSION") == input_buffer)
-        {
-            sprintf(message, "version = %s\r\n", VERSION);
-            uart.transmitMessage(message);
-        }
-        else if(strstr(input_buffer, "SLEEP") == input_buffer)
-        {
-            sleep_flag = 1;
-            uart.transmitMessage("SLEEPING\r\n");
-        }
-        else if(strstr(input_buffer, "WAKEUP") == input_buffer)
-        {
-            uart.transmitMessage("AWAKENED\r\n");
-            sleep_flag = 0;
-            timer3.startTimer();
-        }
-        else // nothing of known
-        {
-            wrong_command = 1;
-        }
         
-        if(wrong_command)
-        {
-            //char wrong_command_mesage[INPUTBUFFERLENGTH + 32];
-            //sprintf(wrong_command_mesage, "WRONG COMMAND %s\r\n", input_buffer);
-            //uart.transmitMessage(wrong_command_mesage);
         }
         
         // initialize input string
@@ -428,7 +453,7 @@ void measure_and_save() // STARTTEST
     strcpy(test_temperature_message, temperature_message);
     strcpy(test_temperature2_message, temperature2_message);
     
-    uart.transmitMessage("START TEST\r\n");
+    uart.transmitMessage("START TEST");
     // set pa0
     GPIOA->BSRRL=GPIO_Pin_0; 
     led.LED_Off();
@@ -436,9 +461,9 @@ void measure_and_save() // STARTTEST
     //uart.transmitMessage("\r\n");
     //uart.transmitMessage(temperature_message);
     //uart.transmitMessage("\r\n");
-    sprintf(message, "current = %d\r\n", common.i_setting);
+    sprintf(message, "current = %d", common.i_setting);
     uart.transmitMessage(message);
-    sprintf(message, "frequency = %f\r\n", working_frequency);
+    sprintf(message, "frequency = %f", working_frequency);
     uart.transmitMessage(message);
     // start high speed timer
     timer2.startTimer();
@@ -482,7 +507,7 @@ void measure_and_save() // STARTTEST
     measure_and_save_flag = 0;
     // reset pa0
     GPIOA->BSRRH=GPIO_Pin_0; 
-    uart.transmitMessage("FINISH TEST\r\n");
+    uart.transmitMessage("FINISH TEST");
     
     // start low speed timer
     timer3.startTimer();
@@ -524,6 +549,44 @@ void readAds8320(void)
    common.ads8320Data = ads8320Data;
    
    GPIOA->BSRRL=GPIO_Pin_8;  //CS pin high (stop spi communication)
+}
+
+void readAds8320_2(void)
+{
+   uint32_t ads8320Data = 0;
+   uint8_t byteBuffer;
+   
+   GPIOB->BSRRH=GPIO_Pin_10;  //CS pin low (start spi communication)
+   
+   while ((SPI2->SR & SPI_I2S_FLAG_TXE) == RESET );
+   SPI2->DR=0x55;
+   while ((SPI2->SR & SPI_I2S_FLAG_TXE) == RESET );
+   while ((SPI2->SR & SPI_I2S_FLAG_RXNE) == RESET);
+   byteBuffer=SPI2->DR;
+   // apply 00000011 mask (0x03); 5 clocks and first zero dout
+   byteBuffer &= 0x03;
+   ads8320Data |= (uint32_t)byteBuffer;
+   ads8320Data <<= 8;
+   
+   while ((SPI2->SR & SPI_I2S_FLAG_TXE) == RESET );
+   SPI2->DR=0x55;
+   while ((SPI2->SR & SPI_I2S_FLAG_TXE) == RESET );
+   while ((SPI2->SR & SPI_I2S_FLAG_RXNE) == RESET);
+   byteBuffer=SPI2->DR;
+   ads8320Data |= (uint32_t)byteBuffer;
+   ads8320Data <<= 8;
+   
+   while ((SPI2->SR & SPI_I2S_FLAG_TXE) == RESET );
+   SPI2->DR=0x55;
+   while ((SPI2->SR & SPI_I2S_FLAG_TXE) == RESET );
+   while ((SPI2->SR & SPI_I2S_FLAG_RXNE) == RESET);
+   byteBuffer=SPI2->DR;
+   ads8320Data |= (uint32_t)byteBuffer;
+   ads8320Data >>= 2;  // 2 "extra" clocks
+   
+   common.ads8320Data_2 = ads8320Data;
+   
+   GPIOB->BSRRL=GPIO_Pin_10;  //CS pin high (stop spi communication)
 }
 
 void readAd7691(void)
@@ -637,6 +700,21 @@ void measure_voltage_temperature()
        
 }
 
+void measure_highlow_current()
+{
+    int i;
+    double current = 0;
+    // get data from external adc
+    for(i=0;i<100;i++)
+    {
+        readAds8320();
+        current += (double)common.ads8320Data;
+    }
+    current /= 100.0;
+    sprintf(Il_message, "Il = %7.1f", current);
+    sprintf(Ih_message, "Ih = %7.1f", current);
+}
+
 void plot_output(int output_slowly)
 {
     int j, k;
@@ -649,37 +727,125 @@ void plot_output(int output_slowly)
     // stop low speed timer
     timer3.stopTimer();
     
-    uart.transmitMessage("START DATA\r\n");
-    sprintf(message, "version = %s\r\n", VERSION);
+    uart.transmitMessage("START DATA");
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    sprintf(message, "version = %s", VERSION);
     uart.transmitMessage(message);
-    sprintf(message, "current = %d\r\n", common.i_setting);
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    sprintf(message, "current = %d", common.i_setting);
     uart.transmitMessage(message);
-    sprintf(message, "frequency = %f\r\n", working_frequency);
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    sprintf(message, "frequency = %f", working_frequency);
     uart.transmitMessage(message);
-    sprintf(message, "number of samples = %d\r\n", samples_in_one_pulse);
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    sprintf(message, "number of samples = %d", samples_in_one_pulse);
     uart.transmitMessage(message);
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
     uart.transmitMessage(test_voltage_message);
-    uart.transmitMessage("\r\n");
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    //uart.transmitMessage("");
     uart.transmitMessage(test_temperature_message);
-    uart.transmitMessage("\r\n");
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    //uart.transmitMessage("");
     uart.transmitMessage(test_temperature2_message);
-    uart.transmitMessage("\r\n");
-    uart.transmitMessage("Il = -----\r\n");
-    uart.transmitMessage("Ih = -----\r\n");
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    //uart.transmitMessage("");
+    uart.transmitMessage(Il_message);
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
+    uart.transmitMessage("Ih_message");
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
     
-    uart.transmitMessage("START LOG\r\n");
+    uart.transmitMessage("START LOG");
+    for(int j=0; j<5; j++) // 25 msec
+    {
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+        for(volatile long i=0; i<13100; i++);
+    }
     //*
     for(k=0; k<common.number_of_pulses*2; k++)
     {
         if(k%2 == 0)
         {
             aux = current_buffer[k/2];
-            sprintf(current_message, "I = %d **************************************** %04d\r\n", aux, k);
+            sprintf(current_message, "I = %d **************************************** %04d", aux, k);
             uart.transmitMessage(current_message);
         }
         else
         {
-            sprintf(current_message, "I = %d **************************************** %04d\r\n", 0, k);
+            sprintf(current_message, "I = %d **************************************** %04d", 0, k);
             uart.transmitMessage(current_message);
         }
         
@@ -687,15 +853,18 @@ void plot_output(int output_slowly)
         {
             sprintf(voltage_message, "%7.1f", (double)(data_buffer[k*samples_in_one_pulse + j])/1000.0*38.0*1.81);
             uart.transmitMessage(voltage_message);
-            uart.transmitMessage("\r\n");
-            //printf("%s\r\n", voltage_message);
+            //uart.transmitMessage("");
+            //printf("%s", voltage_message);
             if(output_slowly)
             {
-                for(volatile long i=0; i<13100; i++);
-                for(volatile long i=0; i<13100; i++);
-                for(volatile long i=0; i<13100; i++);
-                for(volatile long i=0; i<13100; i++);
-                for(volatile long i=0; i<13100; i++);
+                for(int j=0; j<5; j++) // 25 msec
+                {
+                    for(volatile long i=0; i<13100; i++);
+                    for(volatile long i=0; i<13100; i++);
+                    for(volatile long i=0; i<13100; i++);
+                    for(volatile long i=0; i<13100; i++);
+                    for(volatile long i=0; i<13100; i++);
+                }
             }
         }
         
@@ -703,8 +872,8 @@ void plot_output(int output_slowly)
     }
     //*/
     
-    uart.transmitMessage("FINISH LOG\r\n");
-    uart.transmitMessage("FINISH DATA\r\n");
+    uart.transmitMessage("FINISH LOG");
+    uart.transmitMessage("FINISH DATA");
     
     /*
     for(j=0; j<(CURRENT_BUF_LENGTH/divisor); j++)
@@ -734,7 +903,7 @@ void get_voltage()  // GETU
     measure_voltage_temperature();
     
     uart.transmitMessage(voltage_message);
-    uart.transmitMessage("\r\n");
+    //uart.transmitMessage("");
    
 }
 
@@ -745,11 +914,12 @@ void get_voltage_and_temperature()  // GETUT
     
     measure_voltage_temperature();
     
+    
     uart.transmitMessage(voltage_message);
     uart.transmitMessage("; ");
     
     uart.transmitMessage(temperature_message);
-    uart.transmitMessage("\r\n");
+    //uart.transmitMessage("");
 }
 
 void get_voltage_temperature_current()  // GETUTI
@@ -757,19 +927,20 @@ void get_voltage_temperature_current()  // GETUTI
     voltage_temperature_current_flag = 0;
     
     measure_voltage_temperature();
+    measure_highlow_current();
     
-    uart.transmitMessage("START GETUTI\r\n");
+    uart.transmitMessage("START GETUTI");
     
     uart.transmitMessage(voltage_message);
-    uart.transmitMessage("\r\n");
+    //uart.transmitMessage("");
     uart.transmitMessage(temperature_message);
-    uart.transmitMessage("\r\n");
+    //uart.transmitMessage("");
     uart.transmitMessage(temperature2_message);
-    uart.transmitMessage("\r\n");
-    uart.transmitMessage("Il = -----\r\n");
-    uart.transmitMessage("Ih = -----\r\n");
+    //uart.transmitMessage("");
+    uart.transmitMessage("Il = -----");
+    uart.transmitMessage("Ih = -----");
     
-    uart.transmitMessage("FINISH GETUTI\r\n");
+    uart.transmitMessage("FINISH GETUTI");
 }
     
 
@@ -803,28 +974,14 @@ void get_voltage_temperature_current()  // GETUTI
 
 int main()
 {
-    //bluetooth startup configuration--------------------------------------------
-  
-   uart.transmitMessage("^#^$^%");  //send escape sequence if connection is active
-   for(volatile long i=0; i<40000000; i++); //wait some time with no data to enter command mode if connection is active
-   
-   uart.transmitMessage("AT+AB HostEvent Disable\r\n"); //disable notification strings, only for this session
-   for(volatile long i=0; i<100000; i++);
-   
-   uart.transmitMessage("AT+AB Config PIN=0000\r\n"); //set pin
-   for(volatile long i=0; i<100000; i++);
-   
-#ifdef SETNAME
-   sprintf(message, "AT+AB DefaultLocalName %s\r\n", NAME); //set device name
-   uart.transmitMessage(message); 
-   for(volatile long i=0; i<100000; i++);
-#endif
-   
-   //uart.transmitMessage("AT+AB Bypass\r\n"); //start connection if connection is still available
-   //for(volatile long i=0; i<1000000; i++);
-   
-   //uart.transmitMessage("AT+AB Reset\r\n"); //reset bt
-   //for(volatile long i=0; i<80000000; i++);
+ 
+    // configure zigbee module
+    // disassociate with any pan
+    //uart.transmit_zigbee_command("AT+DASSL\r\n");
+    //for(volatile long i=0; i<1310000; i++);  // 100 msec
+    // join pan eda0 in 11 channel
+    //uart.transmit_zigbee_command("AT+JPAN:11,EDA0\r\n");
+    //for(volatile long i=0; i<1310000; i++);  // 100 msec
    
     //*
     uint16_t adc2Data;
@@ -883,13 +1040,15 @@ int main()
             led.LED_On();
        }
        
+       /*
        if(bluetooth_silence >= BLUETOOTH_SILENCE_PERIOD)
        {
            bluetooth_silence = 0;
-           uart.transmitMessage("bluetooth reset\r\n");
+           uart.transmitMessage("bluetooth reset");
            
            gpio.bluetooth_reset();
        }
+       */
    }
    
   

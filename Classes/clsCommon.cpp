@@ -62,6 +62,7 @@ public:
    int samplesCounter;
    
    uint32_t ads8320Data;
+   uint32_t ads8320Data_2;
    uint32_t ad7691Data;
    
    portTickType ads8320DelayBase;
@@ -135,6 +136,7 @@ public:
      pulseOn = 0;
      
      ads8320Data = 0;
+     ads8320Data_2 = 0;
      ad7691Data = 0;
    
      ads8320DelayBase = (portTickType)((configTICK_RATE_HZ/1000));

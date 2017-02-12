@@ -21,6 +21,8 @@ private://**********************************************************************
    
 public://***********************************************************************
 
+    char coord_eid[17];
+
    //----------------------- public constructor -------------------------------
   clsUART() 
   {
@@ -70,7 +72,7 @@ public://***********************************************************************
            - Hardware flow control disabled (RTS and CTS signals)
            - Receive and transmit enabled
      */
-     USART_InitStructure.USART_BaudRate = 115200;
+     USART_InitStructure.USART_BaudRate = 19200;
      USART_InitStructure.USART_WordLength = USART_WordLength_8b;
      USART_InitStructure.USART_StopBits = USART_StopBits_1;
      USART_InitStructure.USART_Parity = USART_Parity_No;
@@ -94,6 +96,7 @@ public://***********************************************************************
         outStringsBuffer[i] = 0;
      outBufferTail = 0;
      
+     coord_eid[16] = 0;
      
   //   
   }// end clsUART
@@ -167,16 +170,40 @@ public://***********************************************************************
       //printf("%c", data);
    }
   
-  // function transmits asciiz message through usart3 without dma
-  void transmitMessage(char *message)
-   {
-      int j = 0;
-      while(message[j])
-      {
-         transmitByte(message[j]);
-         j++;
-      }
-   }
+    // function transmits asciiz message through usart1 without dma
+    void transmitMessage(char *message)
+    {
+        transmit_zigbee(message);
+    }
+  
+    // function transmits asciiz message through usart1 without dma
+    void transmit_zigbee(char *message)
+    {
+        char zigbee_message[128];
+        zigbee_message[0] = 0;
+        strcat(zigbee_message, "AT+UCAST:");
+        strcat(zigbee_message, coord_eid);
+        strcat(zigbee_message, "=");
+        strcat(zigbee_message, message);
+        strcat(zigbee_message, "\r");
+        int j = 0;
+        while(zigbee_message[j])
+        {
+            transmitByte(zigbee_message[j]);
+            j++;
+        }
+    }
+  
+    // function transmits zigbee configuration commands as is
+    void transmit_zigbee_command(char *message)
+    {
+        int j = 0;
+        while(message[j])
+        {
+            transmitByte(message[j]);
+            j++;
+        }
+    }
   
   void initUartRecieve()
   {
@@ -279,7 +306,7 @@ public://***********************************************************************
   
 
   
-};
+}; // end class clsUART
 
 extern "C" void DMA1_Stream4_IRQHandler(void)
 {
@@ -313,3 +340,5 @@ extern "C" void USART1_IRQHandler(void)
   }  
   
 }
+
+
