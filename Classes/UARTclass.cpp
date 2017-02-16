@@ -21,7 +21,9 @@ private://**********************************************************************
    
 public://***********************************************************************
 
-    char coord_eid[17];
+    char coord_eid[17];  // extended id of zigbee network coordinator
+    int ack_waiting_flag;
+    
 
    //----------------------- public constructor -------------------------------
   clsUART() 
@@ -72,7 +74,7 @@ public://***********************************************************************
            - Hardware flow control disabled (RTS and CTS signals)
            - Receive and transmit enabled
      */
-     USART_InitStructure.USART_BaudRate = 19200;
+     USART_InitStructure.USART_BaudRate = 115200;
      USART_InitStructure.USART_WordLength = USART_WordLength_8b;
      USART_InitStructure.USART_StopBits = USART_StopBits_1;
      USART_InitStructure.USART_Parity = USART_Parity_No;
@@ -97,6 +99,7 @@ public://***********************************************************************
      outBufferTail = 0;
      
      coord_eid[16] = 0;
+     ack_waiting_flag = 0;
      
   //   
   }// end clsUART
@@ -186,12 +189,16 @@ public://***********************************************************************
         strcat(zigbee_message, "=");
         strcat(zigbee_message, message);
         strcat(zigbee_message, "\r");
+        long timeout_counter = 13100 *20; // 1 sec ~
+        while(ack_waiting_flag && (timeout_counter > 0))         // wait for ack receiving mesage with timeout
+            timeout_counter--;
         int j = 0;
         while(zigbee_message[j])
         {
             transmitByte(zigbee_message[j]);
             j++;
         }
+        ack_waiting_flag = 1;   // set ack waiting flag
     }
   
     // function transmits zigbee configuration commands as is

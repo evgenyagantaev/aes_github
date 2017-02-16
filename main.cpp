@@ -229,8 +229,14 @@ void uart1_receive_interrupt_service(char r)
         // finalize input string
         input_buffer[input_buffer_index] = 0;
         
+        // look for ACK message, and reset ack waiting flag if found
+        //if((strstr(input_buffer, "ACK:") == input_buffer) || (strstr(input_buffer, "OK") == input_buffer) || (strstr(input_buffer, "SEQ:") == input_buffer))
+        if(input_buffer[0] == 'A' && input_buffer[1] == 'C' && input_buffer[2] == 'K')
+        {
+            uart.ack_waiting_flag = 0;
+        }
         // pass and remove zigbee prompts (look for UNICAST:... message)
-        if((strstr(input_buffer, "UCAST:") == input_buffer))
+        else if((strstr(input_buffer, "UCAST:") == input_buffer))
         {
             //cut prompt
             if(input_buffer_index >= 27)
