@@ -102,13 +102,13 @@ public://                    PUBLIC ZONE
        GPIOB->BSRRL=GPIO_Pin_5;  //pb5 high
    }
    
-   // Function sets pin PC1
+   // Function sets pin PA1
    void high_pa1(void)
    {
       GPIOA->BSRRL=GPIO_Pin_1;  //pa1 high
    }//end high
    
-   // Function resets pin PC1
+   // Function resets pin PA1
    void low_pa1(void)
    {
       GPIOA->BSRRH=GPIO_Pin_1;  //pa1 low

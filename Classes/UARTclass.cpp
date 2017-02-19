@@ -189,7 +189,7 @@ public://***********************************************************************
         strcat(zigbee_message, "=");
         strcat(zigbee_message, message);
         strcat(zigbee_message, "\r");
-        long timeout_counter = 13100 *20; // 1 sec ~
+        long timeout_counter = 13100 *200; // 10 sec ~
         while(ack_waiting_flag && (timeout_counter > 0))         // wait for ack receiving mesage with timeout
             timeout_counter--;
         int j = 0;
@@ -337,14 +337,47 @@ extern "C" void DMA1_Stream4_IRQHandler(void)
 
 extern "C" void USART1_IRQHandler(void)
 {
-  if (USART_GetITStatus(USART1, USART_IT_RXNE)==SET)
-  {
-    
-    char r= (char)(USART1->DR & (uint16_t)0x01FF);
-    uart1_receive_interrupt_service(r);
-    
-    
-  }  
+    if (USART_GetITStatus(USART1, USART_IT_RXNE)==SET)
+    {
+
+        char r= (char)(USART1->DR & (uint16_t)0x01FF);
+        //uart1_receive_interrupt_service(r);    // debilizm
+
+        if(r == '\n')   // line terminal character
+        {
+            if(input_buffer_index == 1) // "\r\n" line received
+            {
+                input_buffer_index = 0; // reset buffer
+            }
+            else if(input_buffer[0] == 'O' && input_buffer[1] == 'K')   // "OK\r\n" line received
+            {
+                input_buffer_index = 0; // reset buffer
+            }
+            else if(input_buffer[0] == 'S' && input_buffer[1] == 'E' && input_buffer[2] == 'Q')  // "seq...\r\n" line received
+            {
+                input_buffer_index = 0; // reset buffer
+            }
+            else if(input_buffer[0] == 'A' && input_buffer[1] == 'C' && input_buffer[2] == 'K')  // "ack...\r\n" line received
+            {
+                ack_waiting_flag = 0;  // drop flag
+                input_buffer_index = 0; // reset buffer
+            }
+            else // none of above simple cases
+            {
+                // just set flag of "full line received" case
+                full_line_received_flag = 1;
+            }
+        }
+        else // add nonterminal character in buffer
+        {
+            input_buffer[input_buffer_index] = r;
+            input_buffer_index++;
+            
+            if(input_buffer_index >= INPUTBUFFERLENGTH)  // something wrong!!! 
+                input_buffer_index = 0; // cycle buffer
+        }
+
+    }  
   
 }
 
