@@ -24,14 +24,14 @@ int short_plot_output_flag = 0;
 int voltage_and_temperature_flag = 0;
 int measure_voltage_temperature_flag = 0;
 int voltage_temperature_current_flag = 0;
-int sleep_flag = 0;
+int sleep_flag = 1;
 
 int full_line_received_flag = 0;
 
 
 //----------------------------global constants----------------------------------
 const double CURRENT_COEFFICIENT = 7.136;
-char VERSION[] = "008-012-047";
+char VERSION[] = "011-015-053";
 char NAME[] = "accu_tester047";
 
 //--------------------------end global constants--------------------------------
@@ -368,7 +368,7 @@ void uart1_receive_interrupt_service()
                 sleep_flag = 1;
                 uart.transmitMessage("SLEEPING");
             }
-            else if(strstr(input_buffer, "WAKEUP") == input_buffer)
+            else if(strstr(input_buffer, "WAKEUP") >= input_buffer)
             {
                 uart.transmitMessage("AWAKENED");
                 sleep_flag = 0;
@@ -697,13 +697,22 @@ void measure_highlow_current()
 {
     int i;
     double current = 0;
+    
+    //turn on current sensor (pa3 high)
+    GPIOA->BSRRL=GPIO_Pin_3; 
+    // delay 0.5 sec
+    for(volatile long i=0; i<4000000; i++);
     // get data from external adc
-    for(i=0;i<100;i++)
+    for(i=0;i<400;i++)
     {
-        readAds8320();
-        current += (double)common.ads8320Data;
+        readAds8320_2();
+        current += (double)common.ads8320Data_2;
     }
-    current /= 100.0;
+    // turn off current sensor (pa3 low)
+    GPIOA->BSRRH=GPIO_Pin_3;  
+    
+    current /= 400.0;
+    current = 20.0 - current * (80.0 / 65535.0); 
     sprintf(Il_message, "Il = %7.1f", current);
     sprintf(Ih_message, "Ih = %7.1f", current);
 }
@@ -891,7 +900,7 @@ int main()
     //for(volatile long i=0; i<1310000; i++);  // 100 msec
     
     // power on analog circuit
-    GPIOB->BSRRH=GPIO_Pin_8;
+    //GPIOB->BSRRH=GPIO_Pin_8;
    
     //*
     uint16_t adc2Data;
@@ -925,6 +934,7 @@ int main()
        if(sleep_flag)
        {
             timer3.stopTimer();
+            for(volatile long i=0; i<8000000; i++);
             led.LED_Off();
             // podgotovka ko snu
             //*
@@ -946,7 +956,7 @@ int main()
             for(volatile long i=0; i<40000000; i++);
             //*/
             
-            //sleep_flag = 0;
+            sleep_flag = 0;
             //timer3.startTimer();
             //uart.transmitMessage("AWAKEN\r\n");
             led.LED_On();

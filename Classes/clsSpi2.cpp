@@ -33,6 +33,7 @@ public:
         GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
         GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL; 
         GPIO_Init(GPIOB, &GPIO_InitStructure);
+        GPIOB->BSRRL=GPIO_Pin_10;  //CS pin high (stop spi communication)
         
        
         /* SPI configuration *****************************************/ 
