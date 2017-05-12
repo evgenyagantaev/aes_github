@@ -16,6 +16,7 @@ double abs(double value);
 #define THEMPERATURE2
 
 // global flags ---------------------------------------------------
+int test_current_flag = 0;
 int measure_and_save_flag = 0;
 int get_voltage_flag = 0;
 int start_plot_output_flag = 0;
@@ -255,6 +256,10 @@ void uart1_receive_interrupt_service()
             {
                 get_voltage_flag = 1;
             }
+            else if(strstr(input_buffer, "TEST") == input_buffer)
+            {
+                test_current_flag = 1;
+            }
             else if(strstr(input_buffer, "SETFREQUENCY") == input_buffer)
             {
                 char ch;
@@ -422,6 +427,56 @@ void measure_current(int descriptor)
         //*/
         current_buffer_index++;
     }
+}
+
+void test_current() // TEST
+{
+    // test: 3 sec
+    // total impulses 1
+    
+    char test_current_message[64];
+    
+    // drop flag
+    test_current_flag = 0;
+    // stop low speed timer
+    timer3.stopTimer();
+    
+    measure_voltage_temperature();
+    measure_highlow_current();
+    strcpy(test_voltage_message, voltage_message);
+    strcpy(test_temperature_message, temperature_message);
+    strcpy(test_temperature2_message, temperature2_message);
+    strcpy(test_Il_message, Il_message);
+    strcpy(test_Ih_message, Ih_message);
+    
+    uart.transmitMessage("TEST CURRENT");
+    // set pa0
+    GPIOA->BSRRL=GPIO_Pin_0; 
+    led.LED_Off();
+    
+    // turn current on
+    gpio.high();
+    
+    // delay
+    volatile long i = 0;
+    for(i=0; i<50000000; i++);
+    
+    // measure current
+    uint16_t adc2Data;
+    ADC_SoftwareStartConv(ADC2);
+    while(!ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC));
+    adc2Data = ADC_GetConversionValue(ADC2);
+    uint16_t current = adc2Data*CURRENT_COEFFICIENT;
+    // turn current off
+    gpio.low();
+    
+    // print current value
+    current = current*5/5;
+    sprintf(test_current_message, "I = %d", current);
+    uart.transmitMessage(test_current_message);
+   
+    // start low speed timer
+    timer3.startTimer();
 }
 
 void measure_and_save() // STARTTEST
@@ -731,8 +786,8 @@ void plot_output(int output_slowly)
     uint16_t aux;
     
     //char message[64];
-    char voltage_message[21];
-    char current_message[21];
+    char voltage_message[64];
+    char current_message[128];
     
     // stop low speed timer
     timer3.stopTimer();
@@ -934,6 +989,8 @@ int main()
            get_voltage_and_temperature();
        if(measure_and_save_flag)
            measure_and_save();
+       if(test_current_flag)
+           test_current();
        if(get_voltage_flag)
            get_voltage();
        if(start_plot_output_flag)
