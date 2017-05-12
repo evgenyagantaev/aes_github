@@ -458,6 +458,12 @@ void measure_and_save() // STARTTEST
     uart.transmitMessage(message);
     sprintf(message, "frequency = %f", working_frequency);
     uart.transmitMessage(message);
+    
+    //turn on current sensor (pa3 high)
+    GPIOA->BSRRL=GPIO_Pin_3; 
+    // delay 0.5 sec
+    for(volatile long i=0; i<4000000; i++);
+    
     // start high speed timer
     timer2.startTimer();
     
@@ -496,6 +502,8 @@ void measure_and_save() // STARTTEST
     // stop high speed timer
     timer2.stopTimer();
     
+    // turn off current sensor (pa3 low)
+    GPIOA->BSRRH=GPIO_Pin_3;  
     
     measure_and_save_flag = 0;
     // reset pa0
@@ -755,7 +763,8 @@ void plot_output(int output_slowly)
     {
         if(k%2 == 0)
         {
-            aux = current_buffer[k/2];
+            //aux = current_buffer[k/2];
+            aux = current_buffer[k/2]*5/5;
             sprintf(current_message, "I = %d **************************************** %04d", aux, k);
             uart.transmitMessage(current_message);
         }
