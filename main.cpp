@@ -32,8 +32,8 @@ int full_line_received_flag = 0;
 
 //----------------------------global constants----------------------------------
 const double CURRENT_COEFFICIENT = 7.136;
-char VERSION[] = "011-015-053";
-char NAME[] = "accu_tester047";
+char VERSION[] = "013-015-059";
+char NAME[] = "accu_tester059";
 
 //--------------------------end global constants--------------------------------
 
@@ -442,12 +442,9 @@ void test_current() // TEST
     timer3.stopTimer();
     
     measure_voltage_temperature();
-    measure_highlow_current();
     strcpy(test_voltage_message, voltage_message);
     strcpy(test_temperature_message, temperature_message);
     strcpy(test_temperature2_message, temperature2_message);
-    strcpy(test_Il_message, Il_message);
-    strcpy(test_Ih_message, Ih_message);
     
     uart.transmitMessage("TEST CURRENT");
     // set pa0
@@ -494,12 +491,12 @@ void measure_and_save() // STARTTEST
     timer3.stopTimer();
     
     measure_voltage_temperature();
-    measure_highlow_current();
+    //measure_highlow_current();
     strcpy(test_voltage_message, voltage_message);
     strcpy(test_temperature_message, temperature_message);
     strcpy(test_temperature2_message, temperature2_message);
-    strcpy(test_Il_message, Il_message);
-    strcpy(test_Ih_message, Ih_message);
+    //strcpy(test_Il_message, Il_message);
+    //strcpy(test_Ih_message, Ih_message);
     
     uart.transmitMessage("START TEST");
     // set pa0
