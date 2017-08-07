@@ -447,8 +447,8 @@ void test_current() // TEST
     strcpy(test_temperature2_message, temperature2_message);
     
     uart.transmitMessage("TEST CURRENT");
-    // set pa0
-    GPIOA->BSRRL=GPIO_Pin_0; 
+    //turn on current sensor (pa3 high)
+    GPIOA->BSRRL=GPIO_Pin_3; 
     led.LED_Off();
     
     // turn current on
@@ -471,6 +471,9 @@ void test_current() // TEST
     current = current*5/5;
     sprintf(test_current_message, "I = %d", current);
     uart.transmitMessage(test_current_message);
+    
+    // turn off current sensor (pa3 low)
+    GPIOA->BSRRH=GPIO_Pin_3;  
    
     // start low speed timer
     timer3.startTimer();
