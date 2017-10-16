@@ -33,7 +33,7 @@ int full_line_received_flag = 0;
 //----------------------------global constants----------------------------------
 const double CURRENT_COEFFICIENT = 7.136;
 char VERSION[] = "013-015-059";
-char NAME[] = "accu_tester059";
+char NAME[] = "accu_tester061";
 
 //--------------------------end global constants--------------------------------
 
