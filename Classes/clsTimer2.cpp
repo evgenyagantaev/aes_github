@@ -47,7 +47,7 @@ public://                    PUBLIC ZONE
    clsTimer2()
    {
       // timer initialization:
-      setPeriod(495); // start period (500 uSec, 2 KHz)
+      setPeriod(495/2); // start period (250 uSec, 4 KHz)
       started = 0;
       
    }//end clsTimer2

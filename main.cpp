@@ -196,9 +196,9 @@ char test_temperature2_message[21];
 #define FREQ_LENGTH 11
 double frequencies[] = {0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0};
 double f_setting = 10.0;
-double working_frequency = 10.0; // frequency in Hertc
+double working_frequency = 2.0; // frequency in Hertc
 
-int samples_in_one_pulse = 100;
+int samples_in_one_pulse = 1000;
 int duration = 1;  // duration in seconds
 
 long bluetooth_silence = 0;
@@ -257,7 +257,7 @@ clsADC1 adc1;
 #include "clsWatchdog.cpp"
 clsWatchdog watchdog;
 
-#include "clsCrcCalculator.cpp";
+#include "clsCrcCalculator.cpp"
 clsCrcCalculator crcCalculator;
 
 
