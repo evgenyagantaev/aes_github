@@ -1034,7 +1034,8 @@ int main()
            measure_voltage_temperature();
        if(voltage_temperature_current_flag)
            get_voltage_temperature_current();
-       if(voltage_and_temperature_flag)
+       //if(voltage_and_temperature_flag)
+       if(1)
            get_voltage_and_temperature();
        if(measure_and_save_flag)
            measure_and_save();
