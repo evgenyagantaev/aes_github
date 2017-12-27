@@ -196,10 +196,10 @@ char test_temperature2_message[21];
 #define FREQ_LENGTH 11
 double frequencies[] = {0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0};
 double f_setting = 10.0;
-double working_frequency = 2.0; // frequency in Hertc
+double working_frequency = 10.0; // frequency in Hertc
 
 int samples_in_one_pulse = 1000;
-int duration = 1;  // duration in seconds
+double duration = 0.2;  // duration in seconds
 
 long bluetooth_silence = 0;
 
@@ -342,7 +342,7 @@ void uart1_receive_interrupt_service()
                     
                     // calculate number of pulses
                     common.number_of_pulses = (int)(duration*working_frequency);
-                    samples_in_one_pulse = (int)( 1000 / working_frequency );
+                    //samples_in_one_pulse = (int)( 1000 / working_frequency );
                 }
                 else // something wrong
                 {
@@ -393,7 +393,7 @@ void uart1_receive_interrupt_service()
                 //common.i_setting = 32;
                 //duration = 1;
                 common.number_of_pulses = (int)(duration*working_frequency);
-                samples_in_one_pulse = (int)( 1000 / working_frequency );
+                //samples_in_one_pulse = (int)( 1000 / working_frequency );
             }
             else if(strstr(input_buffer, "GETTESTDATASLOW") == input_buffer)
             {
@@ -444,27 +444,22 @@ void uart1_receive_interrupt_service()
 
 void measure_current(int descriptor)
 {
-    static uint16_t initial_current = 0xffff;
     uint16_t adc2Data;
     
     ADC_SoftwareStartConv(ADC2);
     while(!ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC));
     adc2Data = ADC_GetConversionValue(ADC2);
     
-    if(descriptor == 0) // proizvodim nachalnoe izmerenie toka
+    if(descriptor != 0) // proizvodim izmerenie v konce impulsa
     {
-        initial_current = adc2Data;
-    }
-    else // proizvodim izmerenie v konce impulsa
-    {
-        current_buffer[current_buffer_index] = adc2Data*CURRENT_COEFFICIENT;
+        current_buffer[current_buffer_index] = (uint16_t)(adc2Data*CURRENT_COEFFICIENT);
         //current_buffer[current_buffer_index] = initial_current;
         /*
         if(initial_current <= adc2Data)
             current_buffer[current_buffer_index] = (uint16_t)((adc2Data - initial_current)*CURRENT_COEFFICIENT);
         else
             current_buffer[current_buffer_index] = 0;
-        //*/
+        */
         current_buffer_index++;
     }
 }
@@ -503,7 +498,7 @@ void test_current() // TEST
     ADC_SoftwareStartConv(ADC2);
     while(!ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC));
     adc2Data = ADC_GetConversionValue(ADC2);
-    uint16_t current = adc2Data*CURRENT_COEFFICIENT;
+    uint16_t current = (uint16_t)(adc2Data*CURRENT_COEFFICIENT);
     // turn current off
     gpio.low();
     
@@ -1006,14 +1001,7 @@ int main()
     // power on analog circuit
     //GPIOB->BSRRH=GPIO_Pin_8;
    
-    //*
-    uint16_t adc2Data;
-    
-    ADC_SoftwareStartConv(ADC2);
-    while(!ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC));
-    adc2Data = ADC_GetConversionValue(ADC2);
-    //*/
-   
+  
    timer3.startTimer();
    //timer2.startTimer();
    
@@ -1022,8 +1010,11 @@ int main()
    {
        for(volatile long j=0; j<13100; j++);
    }
+   
+   // turn analog circuit on
+   //GPIOB->BSRRH=GPIO_Pin_8;  // to 0
    // sleep
-   //sleep_flag = 1;
+   sleep_flag = 1;
    
    
    while(1)
@@ -1034,8 +1025,7 @@ int main()
            measure_voltage_temperature();
        if(voltage_temperature_current_flag)
            get_voltage_temperature_current();
-       //if(voltage_and_temperature_flag)
-       if(1)
+       if(voltage_and_temperature_flag)
            get_voltage_and_temperature();
        if(measure_and_save_flag)
            measure_and_save();

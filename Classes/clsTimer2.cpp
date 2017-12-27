@@ -47,7 +47,7 @@ public://                    PUBLIC ZONE
    clsTimer2()
    {
       // timer initialization:
-      setPeriod(495/2); // start period (250 uSec, 4 KHz)
+      setPeriod(50); // start period (50 uSec, 20 KHz)
       started = 0;
       
    }//end clsTimer2
@@ -101,14 +101,14 @@ void timer2_interrupt_service()
     if(measure_on)
     {
         measurement_counter++;
-        for(int i=0; i<17; i++)
+        for(int i=0; i<4; i++)
         {
             //readAd7691();
             //aux0 += common.ad7691Data;
             readAds8320();
             aux0 += common.ads8320Data;
         }
-        aux0 /= 17;
+        aux0 /= 4;
         //common.ad7691Data = (uint32_t)aux0;
         common.ads8320Data = (uint32_t)aux0;
         if(data_buffer_index < BUFFER_LENGTH)
