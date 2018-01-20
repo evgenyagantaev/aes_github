@@ -1,4 +1,4 @@
-
+#include "short_buffer_object.h"
 int add_new_charachter_to_short_buffer(uint8_t byte_to_add)
 {
 	if(short_buffer_in_index < SHORT_BUFFER_LENGTH)
@@ -47,13 +47,17 @@ uint8_t read_charachter_from_short_buffer()
 			}
 			// decrement in_index
 			short_buffer_in_index--;
+            
+
 		}
 	}
 	else 
 	{
 		// something wrong with index
-		return 0xff;
+		charachter_to_return = 0xff;
 	}
+    
+    return charachter_to_return;
 }
 
 
@@ -61,15 +65,15 @@ uint8_t read_charachter_from_short_buffer()
 
 
 
-void reset_new_charachter_received_flag();
+void reset_new_charachter_received_flag()
 {
 	new_charachter_received_flag = 0;
 }
-void set_new_charachter_received_flag();
+void set_new_charachter_received_flag()
 {
 	new_charachter_received_flag = 1;
 }
-uint8_t get_new_charachter_received_flag();
+int get_new_charachter_received_flag()
 {
 	return new_charachter_received_flag;
 }
@@ -79,7 +83,7 @@ void set_new_charachter(uint8_t byte_to_set)
 {
 	new_charachter = byte_to_set;
 }
-uint8_t get_new_charachter();
+uint8_t get_new_charachter()
 {
 	return new_charachter;
 }

@@ -5,6 +5,7 @@
 
 
 #include "main.h"
+#include "short_buffer_object.h"
 
 double abs(double value);
 
@@ -257,7 +258,7 @@ clsADC1 adc1;
 #include "clsWatchdog.cpp"
 clsWatchdog watchdog;
 
-#include "clsCrcCalculator.cpp";
+#include "clsCrcCalculator.cpp"
 clsCrcCalculator crcCalculator;
 
 

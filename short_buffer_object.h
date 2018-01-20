@@ -1,3 +1,5 @@
+#include "stdint.h"
+
 #define SHORT_BUFFER_LENGTH 7
 
 static uint8_t short_buffer[SHORT_BUFFER_LENGTH];

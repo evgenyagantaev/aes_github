@@ -2241,6 +2241,12 @@
     <name>$PROJ_DIR$\main.h</name>
   </file>
   <file>
+    <name>$PROJ_DIR$\short_buffer_object.cpp</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\short_buffer_object.h</name>
+  </file>
+  <file>
     <name>$PROJ_DIR$\stm32f2xx_conf.h</name>
   </file>
   <file>
