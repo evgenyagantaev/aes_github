@@ -1,12 +1,13 @@
 #include "short_buffer_object.h"
+
+
+
 int add_new_charachter_to_short_buffer(uint8_t byte_to_add)
 {
 	if(short_buffer_in_index < SHORT_BUFFER_LENGTH)
 	{
 		short_buffer[short_buffer_in_index] = byte_to_add;
 		short_buffer_in_index++;
-		// reset new char received flag (which is set by usart irq)
-		reset_new_charachter_received_flag();
 		if(short_buffer_in_index >= SHORT_BUFFER_LENGTH)
 		{
 			short_buffer_overflow_flag = 1; // buffer overflow
