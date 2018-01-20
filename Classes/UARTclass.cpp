@@ -339,43 +339,12 @@ extern "C" void USART1_IRQHandler(void)
 {
     if (USART_GetITStatus(USART1, USART_IT_RXNE)==SET)
     {
-
+		// read byte from usart data register
         char r= (char)(USART1->DR & (uint16_t)0x01FF);
-        //uart1_receive_interrupt_service(r);    // debilizm
-
-        if(r == '\n')   // line terminal character
-        {
-            if(input_buffer_index == 1) // "\r\n" line received
-            {
-                input_buffer_index = 0; // reset buffer
-            }
-            else if(input_buffer[0] == 'O' && input_buffer[1] == 'K')   // "OK\r\n" line received
-            {
-                input_buffer_index = 0; // reset buffer
-            }
-            else if(input_buffer[0] == 'S' && input_buffer[1] == 'E' && input_buffer[2] == 'Q')  // "seq...\r\n" line received
-            {
-                input_buffer_index = 0; // reset buffer
-            }
-            else if(input_buffer[0] == 'A' && input_buffer[1] == 'C' && input_buffer[2] == 'K')  // "ack...\r\n" line received
-            {
-                ack_waiting_flag = 0;  // drop flag
-                input_buffer_index = 0; // reset buffer
-            }
-            else // none of above simple cases
-            {
-                // just set flag of "full line received" case
-                full_line_received_flag = 1;
-            }
-        }
-        else // add nonterminal character in buffer
-        {
-            input_buffer[input_buffer_index] = r;
-            input_buffer_index++;
-            
-            if(input_buffer_index >= INPUTBUFFERLENGTH)  // something wrong!!! 
-                input_buffer_index = 0; // cycle buffer
-        }
+		// save byte for writing in short buffer
+		set_new_charachter(r);
+		// set new byte received flag	
+		set_new_charachter_received_flag();
 
     }  
   
