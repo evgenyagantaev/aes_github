@@ -1087,7 +1087,7 @@ int main()
            gpio.bluetooth_reset();
        }
        */
-   }
+   }// end while
    
   
 }
