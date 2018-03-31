@@ -210,6 +210,7 @@ long bluetooth_silence = 0;
 void measure_voltage_temperature();
 void measure_highlow_current();
 void readAds8320(void);
+void readAds8320_2(void);
 void readAd7691(void);
 void uart1_receive_interrupt_service(char r);
 void measure_and_save();
@@ -911,6 +912,11 @@ void plot_output(int output_slowly)
 }
 
 
+void high_high_plot_output()
+{
+}
+
+
 void get_voltage()  // GETU
 {
     get_voltage_flag = 0;
@@ -1002,19 +1008,58 @@ int main()
     //GPIOB->BSRRH=GPIO_Pin_8;
    
   
-   timer3.startTimer();
+   //timer3.startTimer();
    //timer2.startTimer();
    
    // pause before go to sleep (5 seconds)
-   for(volatile long i=0; i<5000; i++)
-   {
-       for(volatile long j=0; j<13100; j++);
-   }
+   //for(volatile long i=0; i<5000; i++)
+   //{
+       //for(volatile long j=0; j<13100; j++);
+   //}
    
    // turn analog circuit on
-   //GPIOB->BSRRH=GPIO_Pin_8;  // to 0
-   // sleep
-   sleep_flag = 1;
+   GPIOB->BSRRH=GPIO_Pin_8;  // to 0
+   //turn on current sensor (pa3 high)
+    GPIOA->BSRRL=GPIO_Pin_3; 
+   // no sleep here
+   sleep_flag = 0;
+   
+   
+   
+   double voltage = 0;
+   
+   led.LED_Off();
+   // wait for a voltage ******************************************
+   while(voltage < 10000.0)
+   {
+       readAds8320();
+       voltage = common.ads8320Data;
+       voltage = voltage/1000.0*38.0*1.81*6.86;
+   }
+   led.LED_On();
+   
+   // pause 2 sec
+   for(volatile int j=0; j<20; j++)
+       for(volatile long i=0; i<1310000; i++);  // 100 msec
+   
+   led.LED_Off();
+   
+   // start converting and saving data *********************************
+   samples_in_one_pulse = 10000;
+   measure_on = 1;
+   timer2.setPeriod(100);   // 100 uSec
+   timer2.init_timer();
+   timer2.startTimer();
+   
+   // wait for end of measurements
+   while(measure_on);
+   
+   // wait for a get log command and output plot
+   while(1)
+   {
+       if(start_plot_output_flag)
+           high_high_plot_output();
+   }
    
    
    while(1)

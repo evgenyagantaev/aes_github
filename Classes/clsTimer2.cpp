@@ -17,22 +17,7 @@ private://                   PRIVATE ZONE
 
 
    //********************* private functions **********************************
-   void init_timer(void)
-   {
-      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-      TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-      TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-      //60MHz/60 = 1MHz; *1000000=1s=1Hz
-      TIM_TimeBaseStructure.TIM_Prescaler = 60;
-      TIM_TimeBaseStructure.TIM_Period = period;   // 1000000 -> 1 second
-      TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-      TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-      TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
-
-      //TIM_SelectOutputTrigger(TIM2, TIM_TRGOSource_Update);
-      TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-
-   }// end init_tim2
+  
 
    
    //******************** end private functions ********************************
@@ -80,6 +65,24 @@ public://                    PUBLIC ZONE
       period = PERIOD;
       init_timer();
    }
+   
+    void init_timer(void)
+   {
+      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+      TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+      TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+      //60MHz/60 = 1MHz; *1000000=1s=1Hz
+      TIM_TimeBaseStructure.TIM_Prescaler = 60;
+      TIM_TimeBaseStructure.TIM_Period = period;   // 1000000 -> 1 second
+      TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+      TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+      TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+
+      //TIM_SelectOutputTrigger(TIM2, TIM_TRGOSource_Update);
+      TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+
+   }// end init_tim2
+   
    //******************* end public functions **********************************
    
    
@@ -101,15 +104,13 @@ void timer2_interrupt_service()
     if(measure_on)
     {
         measurement_counter++;
+        
         for(int i=0; i<4; i++)
         {
-            //readAd7691();
-            //aux0 += common.ad7691Data;
             readAds8320();
             aux0 += common.ads8320Data;
         }
         aux0 /= 4;
-        //common.ad7691Data = (uint32_t)aux0;
         common.ads8320Data = (uint32_t)aux0;
         if(data_buffer_index < BUFFER_LENGTH)
         {
@@ -117,6 +118,22 @@ void timer2_interrupt_service()
             data_buffer[data_buffer_index] = common.ads8320Data;
             data_buffer_index++;
         }
+        
+        aux0 = 0;
+        for(int i=0; i<4; i++)
+        {
+            readAds8320_2();
+            aux0 += common.ads8320Data_2;
+        }
+        aux0 /= 4;
+        common.ads8320Data_2 = (uint32_t)aux0;
+        if(data_buffer_index < BUFFER_LENGTH)
+        {
+            //data_buffer[data_buffer_index] = common.ad7691Data;
+            data_buffer[data_buffer_index] = common.ads8320Data_2;
+            data_buffer_index++;
+        }
+        
         if(measurement_counter >= samples_in_one_pulse)
             // stop measure
             measure_on = 0;
