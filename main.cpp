@@ -465,6 +465,29 @@ void measure_current(int descriptor)
     }
 }
 
+void measure_current_high_freq(int descriptor)
+{
+    uint16_t adc2Data;
+    
+    ADC_SoftwareStartConv(ADC2);
+    while(!ADC_GetFlagStatus(ADC2, ADC_FLAG_EOC));
+    adc2Data = ADC_GetConversionValue(ADC2);
+    
+    if(descriptor != 0) // proizvodim izmerenie v konce impulsa
+    {
+        current_buffer[current_buffer_index] = (uint16_t)(adc2Data*CURRENT_COEFFICIENT);
+        //current_buffer[current_buffer_index] = initial_current;
+        /*
+        if(initial_current <= adc2Data)
+            current_buffer[current_buffer_index] = (uint16_t)((adc2Data - initial_current)*CURRENT_COEFFICIENT);
+        else
+            current_buffer[current_buffer_index] = 0;
+        */
+        current_buffer_index++;
+    }
+}
+
+
 void test_current() // TEST
 {
     // test: 3 sec
@@ -914,6 +937,36 @@ void plot_output(int output_slowly)
 
 void high_high_plot_output()
 {
+    int j, k;
+    char message[61];
+    char aux_message[7];
+    
+    for(k=0; k<BUFFER_LENGTH/10; k++)
+    {
+        double voltage, current;
+        
+        sprintf(voltage_message, "%7.1f", (double)(data_buffer[k*samples_in_one_pulse + j])/1000.0*38.0*1.81);
+        uart.transmitMessage(voltage_message);
+        
+        message[0] = 0;
+        
+        for(j=0; j<5; j++)
+        {
+            
+            voltage = data_buffer[k*10+j*2];
+            voltage = voltage/1000.0*38.0*1.81*6.86;
+            current = data_buffer[k*10+j*2+1];
+            current = 20.0 - current * (80.0 / 65535.0);
+            
+            sprintf(aux_message, "%6d", (int)voltage);
+            strncat(message, aux_message,6);
+            sprintf(aux_message, "%6d", (int)(current*1000));
+            strncat(message, aux_message,6);
+        }
+        
+        uart.transmitMessage(message);
+    }
+    
 }
 
 
