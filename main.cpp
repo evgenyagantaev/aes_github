@@ -945,9 +945,6 @@ void high_high_plot_output()
     {
         double voltage, current;
         
-        sprintf(voltage_message, "%7.1f", (double)(data_buffer[k*samples_in_one_pulse + j])/1000.0*38.0*1.81);
-        uart.transmitMessage(voltage_message);
-        
         message[0] = 0;
         
         for(j=0; j<5; j++)
@@ -1077,13 +1074,13 @@ int main()
    // no sleep here
    sleep_flag = 0;
    
-   
+    uart.transmitMessage("Hello, Master!\r\n");
    
    double voltage = 0;
    
    led.LED_Off();
    // wait for a voltage ******************************************
-   while(voltage < 10000.0)
+   while(voltage < 5000.0)
    {
        readAds8320();
        voltage = common.ads8320Data;
@@ -1106,6 +1103,8 @@ int main()
    
    // wait for end of measurements
    while(measure_on);
+   
+   high_high_plot_output();
    
    // wait for a get log command and output plot
    while(1)

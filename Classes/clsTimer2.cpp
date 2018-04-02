@@ -99,19 +99,21 @@ public://                    PUBLIC ZONE
 
 void timer2_interrupt_service()
 {
-    uint32_t aux0 = 0;
+    uint32_t aux0 = 0, aux1 = 0;
     
     if(measure_on)
     {
         measurement_counter++;
         
-        for(int i=0; i<4; i++)
+        for(int i=0; i<1; i++)
         {
             readAds8320();
             aux0 += common.ads8320Data;
+            readAds8320_2();
+            aux1 += common.ads8320Data_2;
         }
         aux0 /= 4;
-        common.ads8320Data = (uint32_t)aux0;
+        aux1 /= 4;
         if(data_buffer_index < BUFFER_LENGTH)
         {
             //data_buffer[data_buffer_index] = common.ad7691Data;
@@ -120,7 +122,7 @@ void timer2_interrupt_service()
         }
         
         aux0 = 0;
-        for(int i=0; i<4; i++)
+        for(int i=0; i<1; i++)
         {
             readAds8320_2();
             aux0 += common.ads8320Data_2;
@@ -135,8 +137,7 @@ void timer2_interrupt_service()
         }
         
         if(measurement_counter >= samples_in_one_pulse)
-            // stop measure
-            measure_on = 0;
+             measure_on = 0;// stop measure
     }
     
     /*

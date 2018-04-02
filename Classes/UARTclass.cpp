@@ -176,7 +176,18 @@ public://***********************************************************************
     // function transmits asciiz message through usart1 without dma
     void transmitMessage(char *message)
     {
-        transmit_zigbee(message);
+        transmit(message);
+        //transmit_zigbee(message);
+    }
+  
+    void transmit(char *message)
+    {
+        int j = 0;
+        while(message[j])
+        {
+            transmitByte(message[j]);
+            j++;
+        }
     }
   
     // function transmits asciiz message through usart1 without dma
