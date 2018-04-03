@@ -164,7 +164,6 @@ public://***********************************************************************
    {
       // Check if the previous transmission operation complete
       while(!USART_GetFlagStatus(USART1, USART_FLAG_TC));
-         //taskYIELD();
       // Clear the "Transmission complete" flag
       USART_ClearFlag(USART1, USART_FLAG_TC);
       // Send byte 
@@ -351,8 +350,16 @@ extern "C" void USART1_IRQHandler(void)
     if (USART_GetITStatus(USART1, USART_IT_RXNE)==SET)
     {
 
-        char r= (char)(USART1->DR & (uint16_t)0x01FF);
-        //uart1_receive_interrupt_service(r);    // debilizm
+        char r = (char)(USART1->DR & (uint16_t)0x01FF);
+        
+        // local echo %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        // Check if the previous transmission operation complete
+        while(!USART_GetFlagStatus(USART1, USART_FLAG_TC));
+        // Clear the "Transmission complete" flag
+        USART_ClearFlag(USART1, USART_FLAG_TC);
+        // Send byte 
+        USART_SendData(USART1, (uint16_t)r);
+        // local echo %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
         if(r == '\n')   // line terminal character
         {

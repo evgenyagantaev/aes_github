@@ -23,7 +23,7 @@ private://                   PRIVATE ZONE
       TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
       TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
       //60MHz/60 = 1MHz; *1000000=1s=1Hz
-      TIM_TimeBaseStructure.TIM_Prescaler = 60000;
+      TIM_TimeBaseStructure.TIM_Prescaler = 60;
       TIM_TimeBaseStructure.TIM_Period = period;   // 1000000 -> 1 second
       TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
       TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
@@ -50,7 +50,7 @@ public://                    PUBLIC ZONE
    {
       
       // timer initialization:
-      setPeriod(5000); // start period -> 5 sec
+      setPeriod(1000); // start period -> 1 mSec
       init_timer();
    }//end clsTimer3
    //--------------------------end----------------------------------------------
@@ -94,85 +94,11 @@ public://                    PUBLIC ZONE
       
 };
 
-void timer3_interrupt_service()
-{
-    int i;
-    double voltage = 0;
-    float temperature;
-    
-    char voltage_message[21];
-    char temperature_message[21];
 
-    if(!measure_on)
-    {
-        // toggle led
-        led.toggleLed();
-        
-        // get data from external adc
-        for(i=0;i<100;i++)
-        {
-            readAds8320();
-            voltage += (double)common.ads8320Data;
-        }
-        voltage /= 100.0;
-        voltage = voltage/1000.0*31.0;
-        // voltage data output
-        //debug
-        //printf("%d\r\n", common.ads8320Data);
-        sprintf(voltage_message, "*%04d V", (int)voltage);
-        for(i=0; i<21;i++)
-            uart.transmitByte(voltage_message[i]);
-        printf("%s\r\n", voltage_message);
-        
-        //get temperature
-        temperature = thermometer.readThemperature(1);
-        // temperature data output
-        //debug
-        //printf("%d\r\n", common.ads8320Data);
-        sprintf(temperature_message, "*%04d C", (int)(temperature*100));
-        printf("%s\r\n", temperature_message);
-        //*/
-    }
-    
-}
 
 // timer 3 interrupt service procedure
 extern "C" void TIM3_IRQHandler(void)
 {
-   //if(timer3IsrBypass)
-   if(0)
-   {
-      // previous interrupt is not processed yet
-      // we have to bypass an interrupt procedure
-      // and set flag (abnormal isr)
-      //timer3SeqInterrupted = 1;
-   }
-   else
-   {
-      // set flag, which signals that we started interrupt service procedure
-      //timer3IsrBypass = 1;
-      
-     
-      //portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE; 
-      
-      //printf("timer3\r\n");
-
-      // clear bit
-      if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
-         TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
-      
-      // call function which services this interrupt
-      //measure_voltage_temperature_flag = 1;
-      // toggle led
-      led.toggleLed();
-      bluetooth_silence += 5;
-      
-      // give semaphore to the ISR handler task
-      //xSemaphoreGiveFromISR(u_inMeasureTimerSemaphore, &xHigherPriorityTaskWoken);
-      //GPIOB->BSRRH=GPIO_Pin_9;  //pb9 low
-      
-      // do the context switch, if necessary
-      //portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-      
-   }//end if(timer3IsrBypass)
+   timer3_interrupt_service();
+   
 }

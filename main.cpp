@@ -203,6 +203,8 @@ double duration = 0.2;  // duration in seconds
 
 long bluetooth_silence = 0;
 
+int delay_period = 1500; // default delay period - 1500 mSec
+
 //--------------------------end global variables--------------------------------
 
 //--------------------------function prototypes--------------------------------
@@ -214,6 +216,7 @@ void readAds8320_2(void);
 void readAd7691(void);
 void uart1_receive_interrupt_service(char r);
 void measure_and_save();
+void timer3_interrupt_service();
 
 //--------------------------end function prototypes--------------------------------
 
@@ -263,6 +266,14 @@ clsCrcCalculator crcCalculator;
 
 
 //-------------------------interrupt services------------------------------------
+
+void timer3_interrupt_service()
+{
+     if(delay_period > 0)
+           delay_period--;
+     else
+         timer3.stopTimer();
+}
 
 void uart1_receive_interrupt_service()
 {
@@ -435,6 +446,22 @@ void uart1_receive_interrupt_service()
         }
     
     }// end if((strstr(input_buffer, "UCAST:") == input_buffer))
+    else if((strstr(input_buffer, "log") == input_buffer))
+        start_plot_output_flag = 1;
+    else if((strstr(input_buffer, "delay") == input_buffer))
+    {
+        int delay;
+        int aux = 0;
+        
+        aux = sscanf(input_buffer, "delay %d", &delay);
+        if(aux >= 1)
+        {
+            if((delay >= 500)&&(delay <= 5000))
+                delay_period = delay;
+            sprintf(message, "delay = %d mSec\r\n", delay);
+            uart.transmitMessage(message);
+        }
+    }
     
     // initialize input string
     input_buffer_index = 0;
@@ -953,7 +980,7 @@ void high_high_plot_output()
             voltage = data_buffer[k*10+j*2];
             voltage = voltage/1000.0*38.0*1.81*6.86;
             current = data_buffer[k*10+j*2+1];
-            current = 20.0 - current * (80.0 / 65535.0);
+            current = current * (80.0 / 65535.0);
             
             sprintf(aux_message, "%6d", (int)voltage);
             strncat(message, aux_message,6);
@@ -963,6 +990,8 @@ void high_high_plot_output()
         
         uart.transmitMessage(message);
     }
+    
+    start_plot_output_flag = 0;
     
 }
 
@@ -1046,71 +1075,136 @@ void get_voltage_temperature_current()  // GETUTI
 int main()
 {
  
-    // configure zigbee module
-    // disassociate with any pan
-    //uart.transmit_zigbee_command("AT+DASSL\r\n");
-    //for(volatile long i=0; i<1310000; i++);  // 100 msec
-    // join pan eda0 in 11 channel
-    //uart.transmit_zigbee_command("AT+JPAN:11,EDA0\r\n");
-    //for(volatile long i=0; i<1310000; i++);  // 100 msec
+    int i,j,k;
+    int mode = 0;
     
-    // power on analog circuit
-    //GPIOB->BSRRH=GPIO_Pin_8;
+    // Reset zigbee
+    GPIOB->BSRRH=GPIO_Pin_5;  //pb5 low 
    
-  
-   //timer3.startTimer();
-   //timer2.startTimer();
-   
-   // pause before go to sleep (5 seconds)
-   //for(volatile long i=0; i<5000; i++)
-   //{
-       //for(volatile long j=0; j<13100; j++);
-   //}
-   
-   // turn analog circuit on
-   GPIOB->BSRRH=GPIO_Pin_8;  // to 0
-   //turn on current sensor (pa3 high)
+    // turn analog circuit on
+    GPIOB->BSRRH=GPIO_Pin_8;  // to 0
+    //turn on current sensor (pa3 high)
     GPIOA->BSRRL=GPIO_Pin_3; 
-   // no sleep here
-   sleep_flag = 0;
+    // no sleep here
+    sleep_flag = 0;
+   
+    // 3 blinks*****************
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_Off();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_On();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_Off();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_On();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_Off();
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    
     uart.transmitMessage("Hello, Master!\r\n");
+    
+    // read jumper state and set the mode
+    if((GPIOB->IDR & GPIO_Pin_1) != (uint32_t)Bit_RESET)
+         mode = 1;
+    
+    if(mode == 1)
+        uart.transmitMessage("Mode 10 Sec. Frequency 1 KHz\r\n");
+    else
+    {
+        uart.transmitMessage("Mode 100 mSec. Frequency 100 KHz\r\n");
+        uart.transmitMessage("Defualt delay 1500 mSec.\r\n");
+        uart.transmitMessage("Set delay:\r\n");
+        uart.transmitMessage("type \"delay xxxxx<ENTER>\".\r\n");
+        uart.transmitMessage("Where xxxxx - delay value (miliseconds).\r\n");
+    }
    
    double voltage = 0;
-   
-   led.LED_Off();
-   // wait for a voltage ******************************************
-   while(voltage < 5000.0)
+
+   if(mode == 0)
    {
-       readAds8320();
-       voltage = common.ads8320Data;
-       voltage = voltage/1000.0*38.0*1.81*6.86;
+       // wait for a voltage ******************************************
+       while(voltage < 5000.0)
+       {
+           readAds8320();
+           voltage = common.ads8320Data;
+           voltage = voltage/1000.0*38.0*1.81*6.86;
+           
+           if(full_line_received_flag)
+           uart1_receive_interrupt_service();
+       }
+       led.LED_On();
+       
+       // pause delay_period mSec
+       timer3.startTimer();
+       while(delay_period > 0)
+           j++;
+       timer3.stopTimer();
    }
-   led.LED_On();
    
-   // pause 2 sec
-   for(volatile int j=0; j<20; j++)
-       for(volatile long i=0; i<1310000; i++);  // 100 msec
-   
-   led.LED_Off();
-   
-   // start converting and saving data *********************************
-   samples_in_one_pulse = 10000;
-   measure_on = 1;
-   timer2.setPeriod(100);   // 100 uSec
-   timer2.init_timer();
-   timer2.startTimer();
-   
-   // wait for end of measurements
-   while(measure_on);
-   
-   high_high_plot_output();
+    // start converting and saving data *********************************
+    samples_in_one_pulse = 10000;
+    measure_on = 1;
+    if(mode == 0)
+        timer2.setPeriod(10);   // 10 uSec
+    else 
+        timer2.setPeriod(1000);   // 1000 uSec
+    timer2.init_timer();
+    timer2.startTimer();
+
+    // wait for end of measurements
+    while(measure_on);
+
+    // 3 blinks*****************
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_Off();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_On();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_Off();
+    for(volatile long i=0; i<1000; i++)
+    {
+       for(volatile long j=0; j<13100; j++);
+    }
+    led.LED_On();
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    uart.transmitMessage("Data ready!\r\n");
+    uart.transmitMessage("Type \"log<ENTER>\" for data log output.\r\n");
    
    // wait for a get log command and output plot
    while(1)
    {
+       if(full_line_received_flag)
+           uart1_receive_interrupt_service();
+       
        if(start_plot_output_flag)
            high_high_plot_output();
+       
+       
    }
    
    
