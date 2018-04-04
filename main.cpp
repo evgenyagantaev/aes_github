@@ -1134,27 +1134,28 @@ int main()
     }
    
    double voltage = 0;
+   
+   // wait for a voltage ******************************************
+    while(voltage < 5000.0)
+    {
+       readAds8320();
+       voltage = common.ads8320Data;
+       voltage = voltage/1000.0*38.0*1.81*6.86;
+       
+       if(full_line_received_flag)
+       uart1_receive_interrupt_service();
+    }
+    led.LED_On();
 
-   if(mode == 0)
-   {
-       // wait for a voltage ******************************************
-       while(voltage < 5000.0)
-       {
-           readAds8320();
-           voltage = common.ads8320Data;
-           voltage = voltage/1000.0*38.0*1.81*6.86;
-           
-           if(full_line_received_flag)
-           uart1_receive_interrupt_service();
-       }
-       led.LED_On();
+    if(mode == 0)
+    {
        
        // pause delay_period mSec
        timer3.startTimer();
        while(delay_period > 0)
            j++;
        timer3.stopTimer();
-   }
+    }
    
     // start converting and saving data *********************************
     samples_in_one_pulse = 10000;
