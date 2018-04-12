@@ -2235,10 +2235,10 @@
     <name>$PROJ_DIR$\FreeRTOSConfig.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\main.cpp</name>
+    <name>$PROJ_DIR$\main.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\main.h</name>
+    <name>$PROJ_DIR$\main_test.cpp</name>
   </file>
   <file>
     <name>$PROJ_DIR$\stm32f2xx_conf.h</name>

@@ -17,24 +17,7 @@ private://                   PRIVATE ZONE
 
 
    //********************* private functions **********************************
-   void init_timer(void)
-   {
-      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-      TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-      TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
-      //60MHz/60 = 1MHz; *1000000=1s=1Hz
-      TIM_TimeBaseStructure.TIM_Prescaler = 60;
-      TIM_TimeBaseStructure.TIM_Period = period;   // 1000000 -> 1 second
-      TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-      TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-      TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
-
-      //TIM_SelectOutputTrigger(TIM3, TIM_TRGOSource_Update);
-      TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
-
-      //TIM_Cmd(TIM3, ENABLE);
-      //NVIC_EnableIRQ(TIM3_IRQn);
-   }// end init_tim3
+   
 
    
    //******************** end private functions ********************************
@@ -78,8 +61,26 @@ public://                    PUBLIC ZONE
    void setPeriod(int PERIOD)
    {
       period = PERIOD;
-      init_timer();
    }
+   
+   void init_timer(void)
+   {
+      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+      TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+      TIM_TimeBaseStructInit(&TIM_TimeBaseStructure);
+      //60MHz/60 = 1MHz; *1000000=1s=1Hz
+      TIM_TimeBaseStructure.TIM_Prescaler = 60;
+      TIM_TimeBaseStructure.TIM_Period = period;   // 1000000 -> 1 second
+      TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+      TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+      TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+
+      //TIM_SelectOutputTrigger(TIM3, TIM_TRGOSource_Update);
+      TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+
+      //TIM_Cmd(TIM3, ENABLE);
+      //NVIC_EnableIRQ(TIM3_IRQn);
+   }// end init_tim3
    //******************* end public functions **********************************
    
    
@@ -99,6 +100,10 @@ public://                    PUBLIC ZONE
 // timer 3 interrupt service procedure
 extern "C" void TIM3_IRQHandler(void)
 {
-   timer3_interrupt_service();
+    // clear bit
+    if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET)
+        TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+
+    timer3_interrupt_service();
    
 }

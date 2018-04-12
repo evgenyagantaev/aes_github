@@ -33,6 +33,7 @@ public://                    PUBLIC ZONE
    {
       // timer initialization:
       setPeriod(50); // start period (50 uSec, 20 KHz)
+      init_timer();
       started = 0;
       
    }//end clsTimer2
@@ -63,7 +64,6 @@ public://                    PUBLIC ZONE
    void setPeriod(int PERIOD)
    {
       period = PERIOD;
-      init_timer();
    }
    
     void init_timer(void)

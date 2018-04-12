@@ -1,6 +1,6 @@
 // This main file for 2v version of generator
 #define DEBUG                   // includes debug activities in the compiler job
-
+//#define TEST0
 
 
 
@@ -456,7 +456,7 @@ void uart1_receive_interrupt_service()
         aux = sscanf(input_buffer, "delay %d\r\n", &delay);
         if(aux >= 1)
         {
-            if((delay >= 1)&&(delay <= 5000))
+            if((delay >= 1)&&(delay <= 10000))
                 delay_period = delay;
             sprintf(message, "delay = %d mSec\r\n", delay);
             uart.transmitMessage(message);
@@ -1089,27 +1089,27 @@ int main()
     sleep_flag = 0;
    
     // 3 blinks*****************
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_Off();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_On();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_Off();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_On();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
@@ -1134,6 +1134,7 @@ int main()
     }
    
    double voltage = 0;
+   common.ads8320Data = 0;
    
    // wait for a voltage ******************************************
     while(voltage < 5000.0)
@@ -1149,11 +1150,37 @@ int main()
 
     if(mode == 0)
     {
+#ifdef TEST0
+       // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST>>>>>>>
+       int delay_period_aux = delay_period;
+       // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST<<<<<<<
+#endif
        
        // pause delay_period mSec
        timer3.startTimer();
        while(delay_period > 0)
            j++;
+       led.LED_Off();
+       
+#ifdef TEST0
+       // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST>>>>>>>
+       while(1)
+       {
+           led.LED_Off();
+           delay_period = delay_period_aux;
+           // pause delay_period mSec
+           timer3.startTimer();
+           while(delay_period > 0)
+               j++;
+           led.LED_On();
+           delay_period = delay_period_aux;
+           // pause delay_period mSec
+           timer3.startTimer();
+           while(delay_period > 0)
+               j++;
+       }
+       // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST<<<<<<<
+#endif
     }
    
     // start converting and saving data *********************************
@@ -1163,6 +1190,27 @@ int main()
         timer2.setPeriod(10);   // 10 uSec
     else 
         timer2.setPeriod(1000);   // 1000 uSec
+    
+#ifdef TEST1
+    // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST>>>>>>>
+    samples_in_one_pulse = 100; 1 mSec
+    timer2.init_timer();
+    timer2.startTimer();
+
+    while(1)
+    {
+        led.LED_Off();
+        measure_on = 1;
+        while(measure_on);
+        led.LED_On();
+        measure_on = 1;
+        while(measure_on);
+    }
+    // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST<<<<<<<
+#endif
+    
+    
+    
     timer2.init_timer();
     timer2.startTimer();
 
@@ -1170,22 +1218,22 @@ int main()
     while(measure_on);
 
     // 3 blinks*****************
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_Off();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_On();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
     led.LED_Off();
-    for(volatile long i=0; i<1000; i++)
+    for(volatile long i=0; i<100; i++)
     {
        for(volatile long j=0; j<13100; j++);
     }
