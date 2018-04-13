@@ -1139,12 +1139,20 @@ int main()
    // wait for a voltage ******************************************
     while(voltage < 5000.0)
     {
-       readAds8320();
-       voltage = common.ads8320Data;
-       voltage = voltage/1000.0*38.0*1.81*6.86;
-       
-       if(full_line_received_flag)
-       uart1_receive_interrupt_service();
+        
+        // get data from external adc
+        for(i=0;i<100;i++)
+        {
+            readAds8320();
+            voltage += (double)common.ads8320Data;
+        }
+        voltage /= 100.0;
+        //readAds8320();
+        //voltage = common.ads8320Data;
+        voltage = voltage/1000.0*38.0*1.81*6.86;
+
+        if(full_line_received_flag)
+        uart1_receive_interrupt_service();
     }
     led.LED_On();
 
