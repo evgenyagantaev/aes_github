@@ -6,6 +6,8 @@
 
 #include "main.h"
 #include "short_buffer_object.h"
+#include "ringbuffer.h"
+RingBuffer<32, char> uart_rx_buffer;
 
 double abs(double value);
 
@@ -983,6 +985,10 @@ void get_voltage_temperature_current()  // GETUTI
 
 
 
+void uart_send_byte(char ch)
+{
+    return;
+}
 
 
 
@@ -1029,6 +1035,12 @@ int main()
    
    while(1)
    {
+
+       while (uart_rx_buffer.has_data()) 
+	   {
+           uart_send_byte(uart_rx_buffer.pop());
+       }
+
        if(full_line_received_flag)
            uart1_receive_interrupt_service();
        if(measure_voltage_temperature_flag)
@@ -1076,7 +1088,7 @@ int main()
             //timer3.startTimer();
             //uart.transmitMessage("AWAKEN\r\n");
             led.LED_On();
-       }
+       }// end if(sleep_flag)
        
        /*
        if(bluetooth_silence >= BLUETOOTH_SILENCE_PERIOD)
