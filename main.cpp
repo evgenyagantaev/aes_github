@@ -987,7 +987,8 @@ void get_voltage_temperature_current()  // GETUTI
 
 void uart_send_byte(char ch)
 {
-    return;
+    //uart.transmitByte(ch);
+    //printf("%c", ch);
 }
 
 
@@ -1032,6 +1033,24 @@ int main()
    // sleep
    //sleep_flag = 1;
    
+   /*
+   while(1)
+   {
+       led.LED_On();
+       //uart.transmitMessage("Hello, Master!\r\n");
+       uart.transmitByte('H');
+       // pause before go to sleep (1 second)
+       for(volatile long i=0; i<1000; i++)
+       {
+           for(volatile long j=0; j<13100; j++);
+       }
+       led.LED_Off();
+       for(volatile long i=0; i<1000; i++)
+       {
+           for(volatile long j=0; j<13100; j++);
+       }
+   }
+   //*/
    
    while(1)
    {

@@ -341,7 +341,8 @@ extern "C" void USART1_IRQHandler(void)
     {
         char r = (char)(USART1->DR & (uint16_t)0x01FF);
 
-        if (uart_rx_buffer.push(r) == false) {
+        if (uart_rx_buffer.push(r) == false) 
+        {
             // Произошло переполнение, данные не перезаписываются, но можно выставить флаг
         }
     }  

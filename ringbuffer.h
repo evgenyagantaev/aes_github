@@ -5,6 +5,14 @@ template <int SIZE, class DATA_TYPE = uint8_t, class INDEX_TYPE = uint32_t>
 class RingBuffer
 {
 public:
+    
+    RingBuffer()
+    {
+        _read_count = 0;
+        _write_count = 0;
+        _capacity = SIZE;
+    }
+
     inline bool push(DATA_TYPE value)
     {
         if (is_full()) {
@@ -43,10 +51,10 @@ public:
 
 private:
     DATA_TYPE _data[SIZE];
-    int _capacity = SIZE;
+    int _capacity;
 
-    volatile INDEX_TYPE _read_count = 0;
-    volatile INDEX_TYPE _write_count = 0;
+    volatile INDEX_TYPE _read_count;
+    volatile INDEX_TYPE _write_count;
 
 };
 // end ringbuffer.h
